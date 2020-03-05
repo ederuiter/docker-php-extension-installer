@@ -87,6 +87,7 @@ processCommandArguments() {
 	processCommandArguments_alreadyInstalled="$(getPHPInstalledModules)"
 	processCommandArguments_endArgs=0
 	PHP_MODULES_TO_INSTALL=''
+	ONLY_INSTALL_DEPS=0
 	while :; do
 		if test $# -lt 1; then
 			break
@@ -94,6 +95,10 @@ processCommandArguments() {
 		processCommandArguments_skip=0
 		if test $processCommandArguments_endArgs -eq 0; then
 			case "$1" in
+			        --only-deps
+					ONLY_INSTALL_DEPS=1
+					processCommandArguments_skip=1
+					;;
 				--cleanup)
 					printf '### WARNING the %s option is deprecated (we always cleanup everything) ###\n' "$1" >&2
 					processCommandArguments_skip=1
@@ -1408,9 +1413,20 @@ fi
 sortModulesToInstall
 
 buildRequiredPackageLists $PHP_MAJMIN_VERSION $PHP_MODULES_TO_INSTALL
+
+
+if test $ONLY_INSTALL_DEPS -eq 1; then
+	PACKAGES_VOLATILE=""
+fi
+
 if test -n "$PACKAGES_PERSISTENT$PACKAGES_VOLATILE"; then
 	installRequiredPackages
 fi
+
+if test $ONLY_INSTALL_DEPS -eq 1; then
+	exit 0
+fi
+
 docker-php-source extract
 BUNDLED_MODULES="$(find /usr/src/php/ext -mindepth 2 -maxdepth 2 -type f -name 'config.m4' | xargs -n1 dirname | xargs -n1 basename | xargs)"
 for PHP_MODULE_TO_INSTALL in $PHP_MODULES_TO_INSTALL; do
